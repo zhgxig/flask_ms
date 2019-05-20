@@ -1,13 +1,25 @@
 # coding=utf-8
 from urllib.parse import unquote
 
-from flask import Flask, url_for, redirect, request, Response, abort, make_response, jsonify, render_template
+from flask import Flask, url_for, redirect, request, abort, make_response, jsonify, render_template
 from werkzeug.routing import BaseConverter
 from werkzeug.wrappers import Response
+
 from flask_example.db.orm import db
+
+import logging
+from logging.handlers import RotatingFileHandler
+from flask_sqlalchemy import get_debug_queries
 
 app = Flask(__name__, static_folder="./static", template_folder="./template")
 app.config.from_object("flask_example.setting.setting")
+
+formatter = logging.Formatter("[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s")
+handler = RotatingFileHandler("logs/slow_query.log", maxBytes=10000, backupCount=10)
+
+handler.setLevel(logging.WARN)
+handler.setFormatter(formatter)
+app.logger.addHandler(handler)
 
 
 class ListConverter(BaseConverter):
@@ -114,3 +126,14 @@ def headers():
     # res = make_response(render_template("qwer.html"))
     # return res
     return render_template("qwer.html"), 200
+
+
+@app.after_request
+def after_request(response):
+    for query in get_debug_queries():
+        if query.duration >= app.config["DATABASE_QUERY_TIMEOUT"]:
+            app.logger.warn(
+                ("Context:{}\nSlow QUERY:{}\nParameters: {}\nDuration: {}\n".format(
+                    query.context, query.statement, query.parameters, query.duration))
+            )
+    return response
