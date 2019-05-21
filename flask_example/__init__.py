@@ -2,6 +2,7 @@
 from urllib.parse import unquote
 
 from flask import Flask, url_for, redirect, request, abort, make_response, jsonify, render_template
+from werkzeug.middleware.shared_data import SharedDataMiddleware
 from werkzeug.routing import BaseConverter
 from werkzeug.wrappers import Response
 
@@ -10,6 +11,7 @@ from flask_example.db.orm import db
 import logging
 from logging.handlers import RotatingFileHandler
 from flask_sqlalchemy import get_debug_queries
+from flask_example.utils.utils import get_file_path
 
 app = Flask(__name__, static_folder="./static", template_folder="./template")
 app.config.from_object("flask_example.setting.setting")
@@ -58,6 +60,7 @@ class JsonResponse(Response):
         return super(JsonResponse, cls).force_type(response, environ)
 
 
+app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {"/i/": get_file_path()})
 app.response_class = JsonResponse
 db.init_app(app)
 
