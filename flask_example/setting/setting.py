@@ -18,5 +18,5 @@ SQLALCHEMY_RECORD_QUERIES = True
 
 
 # 上传文件
-UPLOAD_FOLDER = "/upload_files"
+UPLOAD_FOLDER = "../upload_files"
 
