@@ -1,5 +1,6 @@
 import os
 import uuid
+from urllib.parse import quote
 
 from .orm import db
 from datetime import datetime
@@ -64,9 +65,9 @@ class PasteFile(db.Model):
 
     @classmethod
     def create_by_upload_file(cls, uploaded_file):
-        rst = cls(uploaded_file.file_name, uploaded_file.mimetype, 0)
+        rst = cls(uploaded_file.filename, uploaded_file.mimetype, 0)
         uploaded_file.save(rst.path)
-        with open(rst.path, "rh") as f:
+        with open(rst.path, "rb") as f:
             file_md5 = get_file_md5(f)
             uploaded_file = cls.get_by_md5(file_md5)
             if uploaded_file:
@@ -92,10 +93,10 @@ class PasteFile(db.Model):
 
     @classmethod
     def get_by_file_hash(cls, file_hash, code=404):
-        return cls.query.filter_by(file_hash=file_hash).first() or abort(404)
+        return cls.query.filter_by(file_hash=file_hash).first() or abort(code)
 
     def get_url(self, subtype, is_symlink=False):
-        hash_or_link = self.symlink if is_symlink else self.filehash
+        hash_or_link = self.symlink if is_symlink else self.file_hash
         return 'http://{host}/{subtype}/{hash_or_link}'.format(subtype=subtype, host=request.host,
                                                                hash_or_link=hash_or_link)
 
