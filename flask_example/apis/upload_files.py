@@ -1,5 +1,6 @@
-from flask import Blueprint, request, jsonify, abort, render_template, send_file
+from flask import Blueprint, request, jsonify, abort, render_template, send_file, redirect
 from flask_example.db.model import PasteFile, db
+from flask_example.utils.utils import humanize_bytes
 
 upload_files_bp = Blueprint("upload_files", __name__)
 
@@ -29,7 +30,7 @@ def upload_files():
             "size": humanize_bytes(paste_file.size),
             "time": str(paste_file.upload_time),
             "mime_type": paste_file.mime_type,
-            "quoteurl": paste_file.quotrurl
+            "quoteurl": paste_file.quoteurl
         })
 
     return render_template("index.html", **locals())
@@ -67,4 +68,5 @@ def preview(file_hash):
 
 @upload_files_bp.route("/s/<symlink>")
 def s(symlink):
-    paste_file = PasteFile.get
+    paste_file = PasteFile.get_by_symlink(symlink)
+    return redirect(paste_file.url_p)
