@@ -11,6 +11,7 @@ import short_url
 from werkzeug.utils import cached_property
 from flask_example.utils.mimes import *
 from flask_example.utils.utils import get_file_md5, get_file_path
+import flask_login
 
 
 class User(db.Model):
@@ -160,3 +161,11 @@ class PasteFile(db.Model):
                 return t
 
         return 'binary'
+
+
+class LoginUser(flask_login.UserMixin, db.Model):
+    __tablename__ = "login_user"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    login_count = db.Column(db.Integer, default=0)
+    last_login_ip = db.Column(db.String(128), default="Unknown")
