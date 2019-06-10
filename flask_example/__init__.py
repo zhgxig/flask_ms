@@ -1,6 +1,7 @@
 # coding=utf-8
 from urllib.parse import unquote
 
+import flask_login
 from flask import Flask, url_for, redirect, request, abort, make_response, jsonify, render_template
 from werkzeug.middleware.shared_data import SharedDataMiddleware
 from werkzeug.routing import BaseConverter
@@ -12,6 +13,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 from flask_sqlalchemy import get_debug_queries
 from flask_example.utils.utils import get_file_path
+
+from flask import request_finished
 
 app = Flask(__name__, static_folder="./static", template_folder="./template")
 app.config.from_object("flask_example.setting.setting")
@@ -39,6 +42,7 @@ class ListConverter(BaseConverter):
                                    for value in values)
 
 
+# url 识别
 app.url_map.converters['list'] = ListConverter
 
 
@@ -49,6 +53,7 @@ class RegexConverter(BaseConverter):
         self.regex = items[0]
 
 
+# url 识别
 app.url_map.converters['regex'] = RegexConverter
 
 
@@ -61,8 +66,16 @@ class JsonResponse(Response):
 
 
 app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {"/i/": get_file_path()})
+
+# 将 dict -> json
 app.response_class = JsonResponse
+
+# 初始化 db
 db.init_app(app)
+
+# 登录信号
+login_manager = flask_login.LoginManager()
+login_manager.init_app(app)
 
 
 @app.route("/<int:id>/")
@@ -140,3 +153,25 @@ def after_request(response):
                     query.context, query.statement, query.parameters, query.duration))
             )
     return response
+
+
+def log_response(sender, response, **extra):
+    sender.logger.debug("Resquest over. Response: {}".format(response.data.decode()))
+
+
+request_finished.connect(log_response, app)
+
+
+@flask_login.user_logged_in.connect_via(app)
+def _track_logins(sender, user, **extra):
+    user.login_count += 1
+    user.last_login_ip = request.remote_addr
+    db.session.add(user)
+    db.session.commit()
+
+
+@login_manager.user_loader
+def user_loader(id):
+    from flask_example.db.model import LoginUser
+    user = LoginUser.query.filter_by(id=id).first()
+    return user
