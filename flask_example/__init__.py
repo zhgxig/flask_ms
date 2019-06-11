@@ -1,22 +1,22 @@
 # coding=utf-8
+import logging
+from logging.handlers import RotatingFileHandler
 from urllib.parse import unquote
 
 import flask_login
 from flask import Flask, url_for, redirect, request, abort, make_response, jsonify, render_template
+from flask import request_finished
+from flask_sqlalchemy import get_debug_queries
 from werkzeug.middleware.shared_data import SharedDataMiddleware
 from werkzeug.routing import BaseConverter
 from werkzeug.wrappers import Response
 
 from flask_example.db.orm import db
-
-import logging
-from logging.handlers import RotatingFileHandler
-from flask_sqlalchemy import get_debug_queries
 from flask_example.utils.utils import get_file_path
 
-from flask import request_finished
+from flask_debugtoolbar import DebugToolbarExtension
 
-app = Flask(__name__, static_folder="./static", template_folder="./template")
+app = Flask(__name__, static_folder="./static", template_folder="./templates")
 app.config.from_object("flask_example.setting.setting")
 
 formatter = logging.Formatter("[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s")
@@ -76,6 +76,15 @@ db.init_app(app)
 # 登录信号
 login_manager = flask_login.LoginManager()
 login_manager.init_app(app)
+
+# debug tool
+toolbar = DebugToolbarExtension()
+toolbar.init_app(app)
+
+
+@app.route("/")
+def hello():
+    return "<body></body>"
 
 
 @app.route("/<int:id>/")
@@ -139,9 +148,9 @@ def not_found(error):
 
 @app.route("/custom_headers")
 def headers():
-    # res = make_response(render_template("qwer.html"))
-    # return res
-    return render_template("qwer.html"), 200
+    res = make_response(render_template("qwer.html"))
+    res.headers["Content-Type"] = "text/html;charset=utf-8"
+    return res
 
 
 @app.after_request
@@ -155,11 +164,11 @@ def after_request(response):
     return response
 
 
-def log_response(sender, response, **extra):
-    sender.logger.debug("Resquest over. Response: {}".format(response.data.decode()))
-
-
-request_finished.connect(log_response, app)
+# def log_response(sender, response, **extra):
+#     sender.logger.debug("Resquest over. Response: {}".format(response.data.decode()))
+#
+#
+# request_finished.connect(log_response, app)
 
 
 @flask_login.user_logged_in.connect_via(app)
