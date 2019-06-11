@@ -20,3 +20,10 @@ SQLALCHEMY_RECORD_QUERIES = True
 # 上传文件
 UPLOAD_FOLDER = "../upload_files"
 
+
+# tool
+DEBUG_TB_ENABLED = True
+
+# coding
+JSON_AS_ASCII = False
+JSONIFY_MIMETYPE = "application/json;charset=utf-8"
