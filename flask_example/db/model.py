@@ -12,15 +12,15 @@ from werkzeug.utils import cached_property
 from flask_example.utils.mimes import *
 from flask_example.utils.utils import get_file_md5, get_file_path
 import flask_login
+from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.ext.hybrid import hybrid_property
 
 
 class User(db.Model):
-    __tablename__ = "user"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String(50))
-
-    def __init__(self, name):
-        self.name = name
+    __tablename__ = 'user'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    password = db.Column(db.String(256), nullable=False)
 
 
 class PasteFile(db.Model):
