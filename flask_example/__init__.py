@@ -1,5 +1,6 @@
 # coding=utf-8
 import logging
+import os
 from logging.handlers import RotatingFileHandler
 from urllib.parse import unquote
 
@@ -7,7 +8,9 @@ import flask_login
 from flask import Flask, url_for, redirect, request, abort, make_response, jsonify, render_template
 from flask import request_finished
 from flask_sqlalchemy import get_debug_queries
+from werkzeug.middleware.profiler import ProfilerMiddleware
 from werkzeug.middleware.shared_data import SharedDataMiddleware
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.routing import BaseConverter
 from werkzeug.wrappers import Response
 
@@ -16,7 +19,10 @@ from flask_example.utils.utils import get_file_path
 
 from flask_debugtoolbar import DebugToolbarExtension
 
+from collections import OrderedDict
+
 app = Flask(__name__, static_folder="./static", template_folder="./templates")
+json_page = Flask(__name__)
 app.config.from_object("flask_example.setting.setting")
 
 formatter = logging.Formatter("[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s")
@@ -68,7 +74,7 @@ class JsonResponse(Response):
 app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {"/i/": get_file_path()})
 
 # 将 dict -> json
-app.response_class = JsonResponse
+json_page.response_class = JsonResponse
 
 # 初始化 db
 db.init_app(app)
@@ -81,10 +87,28 @@ login_manager.init_app(app)
 toolbar = DebugToolbarExtension()
 toolbar.init_app(app)
 
+# 文件服务器
+app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
+    "/static/": os.path.join(os.path.dirname(__file__), "static")
+})
+
+# profile 性能调试器
+# app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir="/profile")
+app.wsgi_app = DispatcherMiddleware(app.wsgi_app, OrderedDict((
+    ("/json", json_page),
+)))
+
+
+@json_page.route("/hello")
+def hello_():
+    return {"a": 1, "b": 2}
+
 
 @app.route("/")
 def hello():
-    return "<body></body>"
+    res = make_response("<body></body>")
+    res.headers["Content-Type"] = "text/html;charset=utf-8"
+    return res
 
 
 @app.route("/<int:id>/")
@@ -107,8 +131,8 @@ def list3(page_names):
     return 'regex: {}'.format(page_names)
 
 
-with app.test_request_context():
-    print(url_for("list3", page_names="zx"))
+# with app.test_request_context():
+#     print(url_for("list3", page_names="zx"))
 
 
 @app.route("/list4/")
